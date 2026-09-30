@@ -231,6 +231,45 @@ export const LoginPage: React.FC = () => {
                 )}
               </button>
             </form>
+
+            {/* 1-Tap Quick Demo Role Logins */}
+            <div className="pt-2 border-t border-slate-800/80 space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-mono text-slate-500">
+                <span>Quick Officer Demo Logins:</span>
+                <span className="text-cyan-400">1-Tap Sign In</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-left">
+                {[
+                  { name: 'Field Officer', user: 'rajesh.sharma', role: 'OPERATOR' as const, badge: 'NCB-DEL-742', color: 'border-blue-500/40 text-blue-400' },
+                  { name: 'Lab Supervisor', user: 'priya.patel', role: 'SUPERVISOR' as const, badge: 'NCB-MUM-108', color: 'border-emerald-500/40 text-emerald-400' },
+                  { name: 'Forensic Analyst', user: 'vikram.singh', role: 'FORENSIC' as const, badge: 'CFSL-CH-554', color: 'border-purple-500/40 text-purple-400' },
+                  { name: 'Judicial Auditor', user: 'ananya.deshmukh', role: 'AUDITOR' as const, badge: 'JUD-DEL-019', color: 'border-amber-500/40 text-amber-400' },
+                  { name: 'System Admin', user: 'suresh.kumar', role: 'ADMIN' as const, badge: 'NCB-HQ-001', color: 'border-rose-500/40 text-rose-400' },
+                ].map((officer) => (
+                  <button
+                    key={officer.user}
+                    type="button"
+                    onClick={async () => {
+                      setUsername(officer.user);
+                      setPassword('password123');
+                      setSubmitting(true);
+                      try {
+                        await login(officer.user, 'password123', officer.role);
+                        navigate('/', { replace: true });
+                      } catch {
+                        // handled by context
+                      } finally {
+                        setSubmitting(false);
+                      }
+                    }}
+                    className={`p-2 rounded-lg bg-slate-950/80 border ${officer.color} hover:bg-slate-800/80 transition-all text-xs font-mono text-left group`}
+                  >
+                    <div className="font-bold text-slate-200 group-hover:text-white truncate">{officer.name}</div>
+                    <div className="text-[10px] text-slate-500 truncate">{officer.user}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl text-center space-y-1 text-xs text-slate-500 leading-relaxed">
