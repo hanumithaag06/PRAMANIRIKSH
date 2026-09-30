@@ -71,7 +71,7 @@ export const KitProfilesPage: React.FC = () => {
                     Target Substances:
                   </span>
                   <div className="flex flex-wrap gap-1.5">
-                    {kit.target_substances.map((s, idx) => (
+                    {(kit.target_substances || []).map((s, idx) => (
                       <span
                         key={idx}
                         className="bg-slate-900 text-slate-200 px-2 py-0.5 rounded text-[11px] border border-slate-800"

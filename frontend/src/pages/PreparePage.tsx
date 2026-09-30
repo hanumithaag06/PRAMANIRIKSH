@@ -126,7 +126,7 @@ export const PreparePage: React.FC = () => {
                       <p className="text-xs text-slate-400">{kit.test_type}</p>
 
                       <div className="flex flex-wrap gap-1.5 pt-1.5">
-                        {kit.target_substances.map((s, idx) => (
+                        {(kit.target_substances || []).map((s, idx) => (
                           <span
                             key={idx}
                             className="text-[10px] font-mono bg-slate-900 text-slate-300 px-2 py-0.5 rounded border border-slate-800"
