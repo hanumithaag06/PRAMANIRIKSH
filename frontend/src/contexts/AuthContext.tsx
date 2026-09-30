@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-const API_BASE = '/api/v1';
+const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
+
 
 export type UserRole = 'OPERATOR' | 'SUPERVISOR' | 'FORENSIC' | 'AUDITOR' | 'ADMIN';
 
