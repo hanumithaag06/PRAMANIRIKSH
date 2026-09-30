@@ -1,0 +1,27 @@
+{
+  "id": "gov.ncb.pramaniriksh.pwa",
+  "name": "PRAMANIRIKSH — Field Test Verification",
+  "short_name": "PRAMANIRIKSH",
+  "description": "AI-Powered Field Test Verification Companion for Narcotics Control Bureau (NCB)",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B1220",
+  "theme_color": "#0B1220",
+  "categories": ["utilities", "productivity", "government"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

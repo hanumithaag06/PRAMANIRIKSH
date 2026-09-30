@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ShieldCheck, MapPin, Clock, User, CheckCircle, AlertTriangle, ArrowLeft, RefreshCw, Cpu, Layers, Lock, FileText } from 'lucide-react';
+import {
+  ShieldCheck, MapPin, Clock, User, CheckCircle2,
+  AlertTriangle, ArrowLeft, RefreshCw, ChevronDown, ChevronUp,
+  Info, FileText, Camera, Shield, Key, Hash, AlertOctagon,
+} from 'lucide-react';
 import { fetchTestDetail, verifyEvidence, tamperTestRecordDemo } from '../services/api';
-import { StatusBadge } from '../components/StatusBadge';
-import { QualityBadge } from '../components/QualityBadge';
+import { ResultPill, VerificationPill, ConfidencePill } from '../components/PlainPills';
 import { VerificationResponse } from '../types';
+import { EvidenceChain } from '../components/EvidenceChain';
 
 export const TestDetailPage: React.FC = () => {
   const { test_id } = useParams<{ test_id: string }>();
@@ -15,11 +19,11 @@ export const TestDetailPage: React.FC = () => {
   const [verifying, setVerifying] = useState(false);
   const [tampering, setTampering] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [techOpen, setTechOpen] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(true);
 
   useEffect(() => {
-    if (test_id) {
-      loadDetail();
-    }
+    if (test_id) loadDetail();
   }, [test_id]);
 
   const loadDetail = async () => {
@@ -27,11 +31,10 @@ export const TestDetailPage: React.FC = () => {
     try {
       const data = await fetchTestDetail(test_id!);
       setRecord(data);
-      // Auto run verification check
       const verRes = await verifyEvidence(test_id!);
       setVerification(verRes);
     } catch (err: any) {
-      setError(err.message || 'Failed to load test detail');
+      setError("Could not load evidence record from database.");
     } finally {
       setLoading(false);
     }
@@ -40,9 +43,8 @@ export const TestDetailPage: React.FC = () => {
   const handleManualVerify = async () => {
     setVerifying(true);
     try {
-      const res = await verifyEvidence(test_id!);
-      setVerification(res);
-    } catch (err) {}
+      setVerification(await verifyEvidence(test_id!));
+    } catch {}
     setVerifying(false);
   };
 
@@ -52,221 +54,241 @@ export const TestDetailPage: React.FC = () => {
     try {
       await tamperTestRecordDemo(test_id);
       await loadDetail();
-    } catch (err) {}
+    } catch {}
     setTampering(false);
   };
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-16 text-center text-slate-400 font-mono space-y-3">
-        <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin mx-auto" />
-        <p>Loading Cryptographic Evidence Record {test_id}...</p>
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-3 text-slate-400 font-mono text-xs">
+        <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin" />
+        <p>Loading full evidence dossier…</p>
       </div>
     );
   }
 
   if (error || !record) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-4">
+      <div className="max-w-md mx-auto px-4 py-16 text-center space-y-4">
         <AlertTriangle className="w-12 h-12 text-rose-400 mx-auto" />
-        <h2 className="text-xl font-bold text-white">Record Not Found</h2>
-        <p className="text-xs text-slate-400 font-mono">{error || 'Requested test record does not exist.'}</p>
-        <Link to="/history" className="inline-flex items-center gap-2 text-cyan-400 font-mono text-xs hover:underline">
+        <h2 className="text-lg font-bold text-white">Record Not Found</h2>
+        <p className="text-xs text-slate-400 font-mono">{error || 'This test record does not exist in the ledger.'}</p>
+        <Link
+          to="/history"
+          className="inline-flex items-center gap-2 text-cyan-400 text-xs font-mono font-bold hover:underline"
+        >
           <ArrowLeft className="w-4 h-4" /> Return to Test History
         </Link>
       </div>
     );
   }
 
+  const isIntact = verification?.is_valid ?? true;
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-      {/* Top Navigation & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="min-h-screen bg-[#0B1220] bg-ambient-glow text-slate-100">
+      <div className="max-w-3xl mx-auto px-4 py-8 space-y-7 pb-24 md:pb-12">
+
+        {/* ── Back Navigation ── */}
         <button
           onClick={() => navigate('/history')}
           className="inline-flex items-center gap-2 text-xs font-mono text-slate-400 hover:text-white transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Test History
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Test History</span>
         </button>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleTamperDemo}
-            disabled={tampering}
-            className="px-3.5 py-2 bg-rose-950/80 hover:bg-rose-900 text-rose-300 font-mono font-bold text-xs rounded-xl border border-rose-600/50 flex items-center gap-2"
-          >
-            <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-            <span>{tampering ? 'Tampering Record...' : 'DEMO: SIMULATE TAMPERING'}</span>
-          </button>
+        {/* ── LEVEL 1: Evidence Chain Visual Feature ── */}
+        <EvidenceChain
+          isValid={isIntact}
+          imageHash={record.image_sha256}
+          metadataHash={record.metadata_hash}
+          evidenceHash={record.evidence_hash}
+          signature={record.digital_signature}
+          sequenceNumber={record.sequence_number || 1}
+          previousHash={record.previous_evidence_hash}
+          interactive={true}
+        />
 
-          <button
-            onClick={handleManualVerify}
-            disabled={verifying}
-            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 text-white font-mono font-bold text-xs rounded-xl shadow-lg flex items-center gap-2"
-          >
-            <CheckCircle className="w-4 h-4" />
-            <span>{verifying ? 'Verifying Hashes...' : 'RE-VERIFY INTEGRITY'}</span>
-          </button>
+        {/* ── Level 1: Primary Result & Integrity Status ── */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+            <div>
+              <span className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider">
+                EVIDENCE DOSSIER
+              </span>
+              <h1 className="text-xl font-black text-white font-mono">{record.test_id}</h1>
+            </div>
+            {verification && (
+              <VerificationPill valid={isIntact} />
+            )}
+          </div>
+
+          {/* Tamper Alert */}
+          {verification && !isIntact && (
+            <div className="flex items-start gap-3 p-4 bg-rose-950/60 border-2 border-rose-600 rounded-xl text-xs text-rose-200">
+              <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-white">Record Modification Alert</p>
+                <p className="text-rose-300/90 mt-1 leading-relaxed">
+                  Cryptographic verification failed: The current data fingerprint does not match the signed block in the tamper-evident chain.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Result Overview */}
+          <div className="flex items-center justify-between py-2">
+            <div className="space-y-1">
+              <span className="text-xs font-mono font-bold text-slate-400 uppercase">Presumptive Classification</span>
+              <div className="flex items-center gap-3">
+                <ResultPill result={record.presumptive_result} size="lg" />
+                {record.target_substance && (
+                  <span className="text-xs font-mono text-slate-300">
+                    Substance: <strong className="text-white">{record.target_substance}</strong>
+                  </span>
+                )}
+              </div>
+            </div>
+            {record.explanation?.confidence_level && (
+              <ConfidencePill level={record.explanation.confidence_level} />
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Main Evidence Card Header */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-black text-white font-mono">{record.test_id}</h1>
-              {verification && (
-                <StatusBadge type="verification" value={verification.status_label} />
-              )}
+        {/* ── LEVEL 2: Evidence Photo & Field Context ── */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <button
+            id="photo-toggle"
+            onClick={() => setPhotoOpen((v) => !v)}
+            className="w-full flex items-center justify-between p-4 border-b border-slate-800 hover:bg-slate-800/40 transition-colors"
+            aria-expanded={photoOpen}
+          >
+            <div className="flex items-center gap-2 text-xs font-mono font-bold text-white">
+              <Camera className="w-4 h-4 text-cyan-400" />
+              <span>CAPTURED OPTICAL EVIDENCE</span>
             </div>
-            <p className="text-xs font-mono text-slate-400 mt-1">
-              Captured: {new Date(record.timestamp).toLocaleString()} • Kit: {record.kit_name} ({record.kit_version})
-            </p>
-          </div>
-
-          <div className="flex items-center gap-4 bg-slate-950 px-4 py-3 rounded-xl border border-slate-800">
-            <StatusBadge type="result" value={record.presumptive_result} />
-            <div className="text-right font-mono">
-              <p className="text-[10px] text-slate-500 uppercase">Confidence</p>
-              <p className="text-xl font-black text-cyan-400">{(record.confidence_score * 100).toFixed(0)}%</p>
+            <span className="text-xs font-mono text-slate-500">{photoOpen ? '▲ Hide' : '▼ View'}</span>
+          </button>
+          {photoOpen && (
+            <div className="p-4 bg-slate-950/70">
+              <div className="relative aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 flex items-center justify-center p-2">
+                <img
+                  src={record.image_data_base64}
+                  alt="Evidence field photo"
+                  className="w-full h-full object-contain"
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Verification Warning Alert if Tampered */}
-        {verification && !verification.is_valid && (
-          <div className="bg-rose-950/90 border-2 border-rose-600 p-4 rounded-xl text-rose-200 font-mono text-xs space-y-2 animate-pulse">
-            <div className="flex items-center gap-2 font-black text-sm text-rose-300">
-              <AlertTriangle className="w-5 h-5 text-rose-400" />
-              <span>INTEGRITY CHECK FAILED — TAMPERING DETECTED!</span>
-            </div>
-            <ul className="list-disc list-inside space-y-1 text-[11px] opacity-90">
-              {verification.details.failure_reasons.map((reason: string, idx: number) => (
-                <li key={idx}>{reason}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {/* Field Metadata Grid */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-xl">
+          <span className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider">
+            Field Testing Context
+          </span>
 
-        {/* 2-Column Record Details */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left: Original Captured Image & Map Coordinates */}
-          <div className="lg:col-span-5 space-y-4">
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-              <span className="text-xs font-mono text-slate-400 font-bold uppercase">Stored Evidence Photo</span>
-              <div className="relative aspect-video rounded-lg overflow-hidden bg-black flex items-center justify-center border border-slate-800">
-                <img src={record.image_data_base64} alt="Evidence" className="w-full h-full object-contain" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+            <div className="flex items-start gap-2.5">
+              <Clock className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-slate-500">Timestamp</p>
+                <p className="text-slate-200 font-bold">{new Date(record.timestamp).toLocaleString()}</p>
               </div>
             </div>
 
-            {/* GPS & Officer Information */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 font-mono text-xs">
-              <div className="flex items-center gap-2 text-cyan-400 font-bold border-b border-slate-800 pb-2">
-                <MapPin className="w-4 h-4" />
-                <span>FIELD METADATA & OPERATOR IDENTITY</span>
+            <div className="flex items-start gap-2.5">
+              <User className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-slate-500">Authorized Operator</p>
+                <p className="text-slate-200 font-bold">{record.operator_name}</p>
+                <p className="text-slate-500 text-[10px]">{record.badge_id} · {record.department}</p>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
+            </div>
+
+            {record.latitude && (
+              <div className="flex items-start gap-2.5">
+                <MapPin className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
                 <div>
-                  <span className="text-slate-500">Operator:</span>
-                  <p className="text-slate-200 font-bold">{record.operator_name}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500">Badge ID:</span>
-                  <p className="text-slate-200">{record.badge_id}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500">Department:</span>
-                  <p className="text-slate-200">{record.department}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500">GPS Coordinates:</span>
+                  <p className="text-slate-500">GPS Location</p>
                   <p className="text-emerald-400 font-bold">
-                    {record.latitude ? `${record.latitude.toFixed(4)}°, ${record.longitude.toFixed(4)}°` : 'N/A'}
+                    {record.latitude.toFixed(4)}°, {record.longitude?.toFixed(4)}° (±{record.gps_accuracy_m || 5}m)
                   </p>
                 </div>
               </div>
-            </div>
-          </div>
+            )}
 
-          {/* Right: Technical CV & Cryptographic Proof */}
-          <div className="lg:col-span-7 space-y-4">
-            {/* Quality & Calibration metrics */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 font-mono text-xs">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                <span className="font-bold text-slate-300">EXPLAINABLE CV PIPELINE METRICS</span>
-                <span className="text-slate-500">v{record.cv_pipeline_version}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-[11px]">
-                <div>
-                  <span className="text-slate-500">Quality Score:</span>
-                  <p className="text-emerald-400 font-bold font-mono">{(record.quality_score * 100).toFixed(0)}% (Passed)</p>
-                </div>
-                <div>
-                  <span className="text-slate-500">Dominant Hue:</span>
-                  <p className="text-amber-400 font-bold">{record.explanation?.observed_hue_range}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500">Color Distance (Delta-E):</span>
-                  <p className="text-cyan-400 font-bold">{record.explanation?.color_distance}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500">Match Quality:</span>
-                  <p className="text-slate-200">{record.explanation?.match_quality}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Cryptographic Hashes & Signatures */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 font-mono text-xs">
-              <div className="flex items-center gap-2 text-gold font-bold border-b border-slate-800 pb-2">
-                <Lock className="w-4 h-4" />
-                <span>CRYPTOGRAPHIC TAMPER-EVIDENT CHAIN</span>
-              </div>
-              <div className="space-y-2 text-[11px] break-all">
-                <div>
-                  <span className="text-slate-500">Image SHA-256:</span>
-                  <p className="text-slate-300 font-mono bg-slate-900 p-1.5 rounded">{record.image_sha256}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500">Canonical Metadata Hash:</span>
-                  <p className="text-slate-300 font-mono bg-slate-900 p-1.5 rounded">{record.metadata_hash}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500">Evidence Hash (Block #{record.sequence_number}):</span>
-                  <p className="text-cyan-400 font-mono bg-slate-900 p-1.5 rounded font-bold">{record.evidence_hash}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500">Previous Chain Hash:</span>
-                  <p className="text-slate-400 font-mono bg-slate-900 p-1.5 rounded">{record.previous_evidence_hash || 'GENESIS BLOCK'}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500">RSA Asymmetric Digital Signature:</span>
-                  <p className="text-emerald-400 font-mono bg-slate-900 p-1.5 rounded line-clamp-2">{record.digital_signature}</p>
-                </div>
+            <div className="flex items-start gap-2.5">
+              <FileText className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-slate-500">Reagent Configuration</p>
+                <p className="text-slate-200 font-bold">{record.kit_name}</p>
+                <p className="text-slate-500 text-[10px]">Version {record.kit_version}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Evidence Audit Timeline */}
-        {verification && verification.timeline && (
-          <div className="space-y-3 pt-4 border-t border-slate-800 font-mono text-xs">
-            <span className="font-bold text-slate-300 uppercase">Verifiable Audit Event Timeline</span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
-              {verification.timeline.map((step) => (
-                <div key={step.step} className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
-                  <div className="flex items-center justify-between text-[10px] text-cyan-400">
-                    <span>STEP {step.step}</span>
-                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                  </div>
-                  <p className="font-bold text-white text-[11px] leading-tight">{step.title}</p>
-                  <p className="text-[10px] text-slate-500">{new Date(step.timestamp).toLocaleTimeString()}</p>
-                </div>
-              ))}
+        {/* ── LEVEL 3: Technical Details (Progressive Disclosure) ── */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <button
+            id="detail-tech-toggle"
+            onClick={() => setTechOpen((v) => !v)}
+            className="w-full flex items-center justify-between p-4 text-xs font-mono font-bold text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors"
+            aria-expanded={techOpen}
+          >
+            <div className="flex items-center gap-2">
+              <Info className="w-4 h-4 text-cyan-400" />
+              <span>CRYPTOGRAPHIC HASHES & METRICS</span>
             </div>
-          </div>
-        )}
+            <span>{techOpen ? '▲ Hide' : '▼ View'}</span>
+          </button>
+
+          {techOpen && (
+            <div className="p-5 pt-0 border-t border-slate-800 space-y-2.5 font-mono text-[11px] bg-slate-950/80">
+              <div>
+                <span className="text-slate-500 font-bold">Raw Photo SHA-256 Digest:</span>
+                <p className="text-slate-300 break-all bg-slate-900 p-2 rounded border border-slate-800">{record.image_sha256}</p>
+              </div>
+              <div>
+                <span className="text-slate-500 font-bold">Canonical Metadata Hash:</span>
+                <p className="text-slate-300 break-all bg-slate-900 p-2 rounded border border-slate-800">{record.metadata_hash}</p>
+              </div>
+              <div>
+                <span className="text-cyan-400 font-bold">Evidence Hash (Block #{record.sequence_number}):</span>
+                <p className="text-cyan-300 font-bold break-all bg-cyan-950/40 p-2 rounded border border-cyan-500/40">{record.evidence_hash}</p>
+              </div>
+              <div>
+                <span className="text-emerald-400 font-bold">RSA Digital Signature:</span>
+                <p className="text-emerald-300 break-all bg-slate-900 p-2 rounded border border-slate-800">{record.digital_signature}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Actions: Re-verify & Demo Tamper Simulation ── */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <button
+            id="re-verify-btn"
+            onClick={handleManualVerify}
+            disabled={verifying}
+            className="flex-1 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 text-white font-mono font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>{verifying ? 'Verifying Integrity…' : 'Re-verify Evidence Fingerprint'}</span>
+          </button>
+
+          <button
+            id="tamper-demo-btn"
+            onClick={handleTamperDemo}
+            disabled={tampering}
+            className="flex-1 py-3.5 bg-rose-950/50 hover:bg-rose-900/60 text-rose-300 font-mono font-bold text-xs rounded-xl border border-rose-600/40 flex items-center justify-center gap-2 transition-all shadow-lg shadow-rose-950/40"
+          >
+            <AlertTriangle className="w-4 h-4 text-rose-400" />
+            <span>{tampering ? 'Simulating…' : 'DEMO: Simulate Tampering'}</span>
+          </button>
+        </div>
       </div>
     </div>
   );

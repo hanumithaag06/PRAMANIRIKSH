@@ -1,0 +1,17 @@
+{
+  "appId": "gov.ncb.pramaniriksh",
+  "appName": "PRAMANIRIKSH",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "plugins": {
+    "Camera": {
+      "permissionsType": "camera"
+    },
+    "Geolocation": {
+      "permissionsType": "location"
+    }
+  }
+}

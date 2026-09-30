@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PRAMANIRIKSH</string>
+    <string name="title_activity_main">PRAMANIRIKSH</string>
+    <string name="package_name">gov.ncb.pramaniriksh</string>
+    <string name="custom_url_scheme">gov.ncb.pramaniriksh</string>
+</resources>
